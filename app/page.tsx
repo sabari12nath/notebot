@@ -1,103 +1,107 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import { useState, useEffect, useRef } from 'react';
+import ChatHeader from '../components/ChatHeader';
+import MessageBubble from '@/components/MessageBubble';
+import ChatInput from '@/components/ChatInput';
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+// Remove the mock getRoastResponse and use a simple roast message:
+function getRoastResponse(input: string, name: string): string {
+  return `That was a terrible question: "${input}"`;
+}
+
+type Message = {
+  role: 'user' | 'bot';
+  content: string;
+};
+
+export default function Page() {
+  const [name, setName] = useState('');
+  const [inputName, setInputName] = useState('');
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const themeClasses =
+    theme === 'light'
+      ? {
+          main: 'bg-gray-100 text-gray-900 font-sans',
+          section: '',
+        }
+      : {
+          main: 'bg-gray-900 text-gray-100 font-sans',
+          section: '',
+        };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleNameSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputName.trim()) setName(inputName.trim());
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const userMsg: Message = { role: 'user', content: input };
+    const botMsg: Message = { role: 'bot', content: getRoastResponse(input, name) };
+    setMessages((prev) => [...prev, userMsg, botMsg]);
+    setInput('');
+  };
+
+  if (!name) {
+    return (
+      <main className={`flex items-center justify-center h-screen ${themeClasses.main}`}>
+        <form
+          onSubmit={handleNameSubmit}
+          className="border shadow-lg p-8 rounded-lg space-y-4 w-full max-w-sm bg-white"
+        >
+          <h2 className="text-2xl font-bold text-center tracking-wide">
+            Hey! What's your name?
+          </h2>
+          <input
+            type="text"
+            placeholder="Enter a name"
+            className="w-full p-2 rounded font-sans outline-none focus:ring-2 focus:ring-blue-400 transition bg-gray-100 border border-gray-300 text-gray-900"
+            value={inputName}
+            onChange={(e) => setInputName(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="w-full font-semibold p-2 rounded transition bg-blue-600 text-white hover:bg-blue-700"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+            Continue
+          </button>
+          <div className="flex justify-center pt-2">
+          </div>
+        </form>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+    );
+  }
+
+  return (
+    <main className={`flex flex-col h-screen ${themeClasses.main}`}>
+      <ChatHeader name={name} theme={theme} setTheme={setTheme} />
+      <section className={`flex-1 overflow-y-auto px-4 py-2 space-y-4 ${themeClasses.section}`}>
+        {messages.map((msg, idx) => (
+          <MessageBubble key={idx} msg={msg} theme={theme} />
+        ))}
+        <div ref={messagesEndRef} />
+      </section>
+      <ChatInput
+        input={input}
+        setInput={setInput}
+        handleSubmit={handleSubmit}
+        theme={theme}
+      />
+      <style jsx global>{`
+        body {
+          font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+          background: ${theme === 'light' ? '#f3f4f6' : '#181825'};
+        }
+      `}</style>
+    </main>
   );
 }

@@ -1,45 +1,20 @@
 <template>
-  <div class="min-h-screen bg-gray-900 p-6 text-white">
-    <h1 class="text-3xl font-bold mb-4">RoastBot 🤖🔥</h1>
-
-    <div class="flex gap-2 mb-4">
-      <input
-        v-model="userInput"
-        @keyup.enter="sendMessage"
-        placeholder="Ask something... if you dare 💀"
-        class="flex-1 p-3 text-black rounded-lg outline-none"
-      />
-      <button
-        @click="sendMessage"
-        class="bg-rose-600 hover:bg-rose-700 px-4 py-2 rounded-lg font-bold"
-      >
-        Roast & Help
-      </button>
-    </div>
-
-    <div v-if="botReply" class="bg-gray-800 p-4 rounded-lg shadow">
-      <p class="whitespace-pre-line">{{ botReply }}</p>
+  <div class="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <Sidebar @select="insertSubjectPrompt" />
+    <div class="flex-1 relative">
+      <DarkModeToggle />
+      <ChatBox ref="chatBox" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import Sidebar from './components/Sidebar.vue'
+import ChatBox from './components/ChatBox.vue'
+import DarkModeToggle from './components/DarkModeToggle.vue'
 
-const userInput = ref('')
-const botReply = ref('')
-
-const sendMessage = async () => {
-  if (!userInput.value.trim()) return
-
-  const res = await fetch('http://localhost:8000/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: userInput.value })
-  })
-
-  const data = await res.json()
-  botReply.value = data.reply
-  userInput.value = ''
+const insertSubjectPrompt = (subject) => {
+  const chat = document.querySelector('input')
+  if (chat) chat.value = `Explain important topics in ${subject}`
 }
 </script>

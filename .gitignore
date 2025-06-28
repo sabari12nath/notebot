@@ -39,3 +39,9 @@ desktop.ini
 # 👇 Optional: ignore env vars and keys
 .env
 .env.*
+
+
+renv/
+*.dll
+*.lib
+*.exe

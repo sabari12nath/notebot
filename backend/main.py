@@ -3,7 +3,7 @@
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from gpt_logic import roast_and_help
+from gbt_logic import roast_and_help
 
 app = FastAPI()
 

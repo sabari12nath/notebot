@@ -1,36 +1,200 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🏗️ KTU Civil Engineering Chatbot
+A snarky AI chatbot for civil engineering students — asks your silly questions, roasts you for them, and still helps you pass!
+Built with Next.js (React) on the frontend, and a choice of:
 
-## Getting Started
+✅ FastAPI backend with OpenAI GPT-4
 
-First, run the development server:
+✅ Or a local conversational model (DialoGPT)
 
-```bash
+🚀 Features
+✅ Fun roast replies
+✅ Civil engineering Q&A (structural analysis, concrete tech, surveying, fluid mechanics, etc.)
+✅ Dark/light theme toggle
+✅ Chat history download
+✅ Sidebar with quick topics
+
+🗂️ Project Structure
+graphql
+Copy
+Edit
+my-chatbot/
+ ├─ frontend/         # Your Next.js app
+ ├─ backend/          # Your FastAPI server OR local Transformers script
+ ├─ .env              # For OpenAI API key (if using GPT)
+ ├─ README.md
+⚙️ Requirements
+Python 3.8+
+
+Node.js 18+
+
+pip install fastapi uvicorn openai python-dotenv (for OpenAI FastAPI)
+
+Or pip install transformers (for DialoGPT)
+
+OpenAI account + API key (for GPT backend)
+
+🔑 Setup
+Clone the repo:
+
+bash
+Copy
+Edit
+git clone https://github.com/yourusername/ktu-civil-chatbot.git
+cd ktu-civil-chatbot
+Install frontend dependencies:
+
+bash
+Copy
+Edit
+cd frontend
+npm install
+Install backend dependencies:
+
+bash
+Copy
+Edit
+cd backend
+# For OpenAI FastAPI
+pip install fastapi uvicorn openai python-dotenv
+# Or for DialoGPT
+pip install transformers
+Create .env in backend/:
+
+env
+Copy
+Edit
+OPENAI_API_KEY=your_openai_api_key_here
+🧠 Option 1 — Local AI Model (DialoGPT)
+✅ Run DialoGPT locally
+python
+Copy
+Edit
+# backend/dialo_gpt_chat.py
+from transformers import pipeline, Conversational
+
+# Load conversational pipeline
+chatbot = pipeline("conversational", model="microsoft/DialoGPT-medium")
+
+# Start conversation
+conversation = Conversational("Hi there!")
+response = chatbot(conversation)
+print(response)
+
+# Continue conversation
+conversation.add_user_input("Tell me about concrete technology.")
+response = chatbot(conversation)
+print(response)
+Note: DialoGPT is general chit-chat, not domain-specific.
+Use this for local testing only.
+
+🧠 Option 2 — FastAPI + OpenAI GPT
+✅ main.py
+python
+Copy
+Edit
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust for prod
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class ChatRequest(BaseModel):
+    message: str
+
+@app.post("/chat")
+async def chat_endpoint(chat_request: ChatRequest):
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a snarky civil engineering tutor."},
+            {"role": "user", "content": chat_request.message}
+        ]
+    )
+    answer = response.choices[0].message.content
+    return {"response": answer}
+✅ Run FastAPI
+bash
+Copy
+Edit
+uvicorn main:app --reload --port 8000
+✅ Connect Next.js to FastAPI
+Your Next.js /api/chat.ts should proxy to FastAPI:
+
+ts
+Copy
+Edit
+// pages/api/chat.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === "POST") {
+    const response = await fetch("http://127.0.0.1:8000/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: req.body.message }),
+    });
+
+    const data = await response.json();
+    res.status(200).json(data);
+  } else {
+    res.status(405).json({ error: "Method not allowed" });
+  }
+}
+✨ Running Everything
+Start the backend:
+
+bash
+Copy
+Edit
+cd backend
+uvicorn main:app --reload --port 8000
+Start the frontend:
+
+bash
+Copy
+Edit
+cd frontend
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Open http://localhost:3000 and start asking your silly questions!
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🔒 Security Tips
+Never expose your OpenAI API key to the frontend.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Restrict CORS in production.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Use HTTPS when deployed.
 
-## Learn More
+Monitor usage if you use OpenAI to avoid high costs.
 
-To learn more about Next.js, take a look at the following resources:
+🚀 Deploy
+Deploy FastAPI on Render, Railway, or Fly.io.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Deploy Next.js on Vercel or Netlify.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Set OPENAI_API_KEY as an environment variable on your server.
 
-## Deploy on Vercel
+👷 Future improvements
+✅ Add embeddings + vector store (RAG) for real course PDFs
+✅ Add streaming responses
+✅ Save chat history to a database
+✅ Add user authentication
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+📚 Credits
+Frontend: Next.js, React, Tailwind CSS
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Backend: FastAPI + OpenAI or Hugging Face Transformers
+
+Roast style: You and your seniors 😏

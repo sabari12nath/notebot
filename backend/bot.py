@@ -1,66 +1,76 @@
-import re
-import requests
-from bs4 import BeautifulSoup
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import os
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from dotenv import load_dotenv
+from openai import OpenAI
+from fastapi.responses import JSONResponse
 
-# Load TinyLlama or any Hugging Face-compatible LLM
-tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
-model = AutoModelForCausalLM.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+# Hugging Face Transformers imports
+try:
+    from transformers import pipeline
+except ImportError as e:
+    raise ImportError(
+        "Your 'transformers' package is too old or not installed. "
+        "Please run: pip install --upgrade transformers"
+    ) from e
 
-# Map of semesters to KTU notes pages
-ktu_notes_pages = {
-    f"S{i}": f"https://www.ktunotes.in/ktu-s{i}-notes-2019-scheme/" for i in range(1, 9)
-}
+# Load .env file
+load_dotenv()
 
-# --- Extract semester, branch, and subject ---
-def parse_input(user_input: str):
-    sem_match = re.search(r"S[1-8]", user_input.upper())
-    sem = sem_match.group() if sem_match else None
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    branches = ["CSE", "ECE", "MECH", "CIVIL", "EEE", "IT"]
-    branch = next((b for b in branches if b in user_input.upper()), None)
+# Initialize Hugging Face chatbot pipeline (loads model at startup)
+chatbot = pipeline("text-generation", model="microsoft/DialoGPT-medium")
 
-    # Extract subject as remaining words after removing sem and branch
-    clean_input = re.sub(rf"{sem}|{branch}", "", user_input, flags=re.IGNORECASE)
-    subject = clean_input.strip().replace("notes", "").replace("explain", "").strip()
+app = FastAPI()
 
-    return sem, branch, subject
+# CORS middleware for local dev — adjust for production
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or ["http://localhost:3000"] for dev
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# --- Search the KTU page for subject and return PDF or fallback link ---
-def fetch_subject_url(semester, subject_keyword):
-    url = ktu_notes_pages.get(semester)
-    if not url:
-        return None
+# Request schema
+class ChatRequest(BaseModel):
+    message: str
+    model: str = "openai"  # "openai" or "huggingface"
 
+@app.post("/chat")
+async def chat_endpoint(chat_request: ChatRequest):
     try:
-        soup = BeautifulSoup(requests.get(url).text, "html.parser")
-        links = soup.find_all("a", href=True)
-        for a in links:
-            if subject_keyword.lower() in a.text.lower():
-                return a["href"] if a["href"].startswith("http") else "https://www.ktunotes.in" + a["href"]
+        user_message = chat_request.message
+        model_choice = chat_request.model.lower()
+
+        if model_choice == "huggingface":
+            # Use Hugging Face DialoGPT with text-generation
+            response = chatbot(user_message, max_length=100, pad_token_id=50256)
+            answer = response[0]['generated_text'] if response and 'generated_text' in response[0] else "Sorry, I didn't get that."
+            return {"response": answer}
+        else:
+            # Default: Use OpenAI GPT-4o
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a sarcastic civil engineering tutor. "
+                            "Always give clear civil engineering explanations but add a snarky or humorous remark."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": user_message
+                    }
+                ]
+            )
+            answer = response.choices[0].message.content
+            return {"response": answer}
     except Exception as e:
-        return None
-    return url  # fallback to sem page
-
-# --- LLM prompt formatting ---
-def get_llm_response(user_name, subject, subject_url):
-    roast_prompt = (
-        f"You are RoastBot. Roast {user_name} brutally, then explain the topic "
-        f"'{subject}' in 3 key bullet points for a KTU exam. Add a link if available.\n\n"
-        f"[KTU Notes Link]: {subject_url}\n\n"
-        f"Respond like a sarcastic college senior."
-    )
-    inputs = tokenizer(roast_prompt, return_tensors="pt")
-    outputs = model.generate(**inputs, max_new_tokens=200)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-# --- Full chatbot handler function ---
-def handle_user_question(user_input, user_name="bro"):
-    sem, branch, subject = parse_input(user_input)
-
-    if not sem or not branch or not subject:
-        return f"Yo {user_name}, are you even trying? I need a semester, branch, and subject. 🧠"
-
-    subject_url = fetch_subject_url(sem, subject)
-    return get_llm_response(user_name, subject, subject_url or "https://www.ktunotes.in")
-
+        # Always return JSON on error
+        return JSONResponse(status_code=500, content={"error": "Internal server error", "details": str(e)})

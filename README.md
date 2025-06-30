@@ -39,7 +39,7 @@ Clone the repo:
 bash
 Copy
 Edit
-git clone https://github.com/yourusername/ktu-civil-chatbot.git
+git clone https://github.com/sabari12nath/notebot
 cd ktu-civil-chatbot
 Install frontend dependencies:
 
